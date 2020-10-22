@@ -21,8 +21,8 @@ namespace AkkaChat
         }
 
 
-        [HttpGet]
-        public async Task<string> Post(string userId, string message)
+        [HttpGet("AddMessage")]
+        public async Task<string> AddMessage(string userId, string message)
         {
             var chatRoomActorProps = Props.Create<ChatRoomActor>();
             var chatRoomActorRef = _actorSystem.ActorOf(chatRoomActorProps);
@@ -33,5 +33,18 @@ namespace AkkaChat
             return answer.Message;
 
         }
+
+        [HttpGet("GetMessages")]
+        public async Task<IReadOnlyList<ChatMessage>> GetMessages()
+        {
+            var chatRoomActorProps = Props.Create<ChatRoomActor>();
+            var chatRoomActorRef = _actorSystem.ActorOf(chatRoomActorProps);
+
+
+            var answer = await chatRoomActorRef.Ask<IReadOnlyList<ChatMessage>>(new GetChatMessage());
+            return answer;
+
+        }
+
     }
 }
