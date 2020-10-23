@@ -1,40 +1,51 @@
-﻿using Akka.Actor;
+﻿using Akka.Persistence;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace AkkaChat
 {
-    public class ChatRoomActor : ReceiveActor
+    public class ChatRoomActor : ReceivePersistentActor
     {
 
-        private List<ChatMessage> _list;
+        private readonly List<ChatMessage> _list = new List<ChatMessage>();
 
-        public ChatRoomActor(List<ChatMessage> chatMessages)
+        public override string PersistenceId => "my-chat-room-actorId";
+
+        public ChatRoomActor()
         {
-            _list = chatMessages;
-
-            Receive<AddChatMessage>(x =>
+            Recover<ChatMessage>(x =>
             {
-                var message = new ChatMessage(x.UserName, x.Message);
-                _list.Add(message);
-
-
-                Sender.Tell(new ReturnMessage($"[{x.Message}] を投稿しました。"));
+                _list.Add(x);
+                Debug.WriteLine("Actor Recovered.");
             });
 
 
-            Receive<GetChatMessage>(x => Sender.Tell(FetchMessages()));
-        }
+            Command<AddChatMessage>(x =>
+            {
+                Persist(x, y =>
+                {
+                    var message = new ChatMessage(x.UserName, x.Message);
+                    _list.Add(message);
 
-        public ChatRoomActor() : this(new List<ChatMessage>())
-        {
+                    Debug.WriteLine($"Saved ===> {x.UserName} posted: {x.Message}");
+                });
+            });
+
+
+            Command<GetChatMessage>(x =>
+            {
+                Sender.Tell(FetchMessages(), Self);
+            });
         }
 
 
         private IReadOnlyList<ChatMessage> FetchMessages() {
-            return _list.AsReadOnly();
+            return _list.Select(x => x)
+                        .ToList()
+                        .AsReadOnly();
         }
     }
 }

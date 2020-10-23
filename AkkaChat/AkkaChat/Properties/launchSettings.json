@@ -15,7 +15,8 @@
       "launchUrl": "api/ChatRoom/GetMessages",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+      },
+      "ancmHostingModel": "OutOfProcess"
     },
     "AkkaChat": {
       "commandName": "Project",
