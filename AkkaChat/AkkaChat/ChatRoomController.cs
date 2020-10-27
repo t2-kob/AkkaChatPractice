@@ -12,10 +12,6 @@ namespace AkkaChat
     [ApiController]
     public class ChatRoomController : ControllerBase
     {
-        protected static volatile Dictionary<string, IActorRef> ChatRoomActors = new Dictionary<string, IActorRef>();
-
-
-
         private readonly ActorSystem _actorSystem;
 
 
@@ -36,8 +32,6 @@ namespace AkkaChat
             var createChatRoomMessage = new CreateChatRoomMessage(chatRoomName);
 
             var answer = await chatRoomActor.Ask<ReturnMessage>(createChatRoomMessage);
-            ChatRoomActors.Add(chatRoomActorName, chatRoomActor);
-
             return answer.Message;
         }
 
