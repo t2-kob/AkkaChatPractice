@@ -12,40 +12,65 @@ namespace AkkaChat
     [ApiController]
     public class ChatRoomController : ControllerBase
     {
-        private ActorSystem _actorSystem;
+        protected static volatile Dictionary<string, IActorRef> ChatRoomActors = new Dictionary<string, IActorRef>();
 
-        protected static IActorRef ChatRoomActor;
+
+
+        private readonly ActorSystem _actorSystem;
+
 
 
         public ChatRoomController(ActorSystem actorSystem)
         {
             _actorSystem = actorSystem;
+        }
 
-            if (ChatRoomActor == null)
-            {
-                var chatRoomActorProps = Props.Create<ChatRoomActor>();
-                ChatRoomActor = _actorSystem.ActorOf(chatRoomActorProps, "my-chat-room-actor");
-            }
 
+
+        [HttpGet("CreateChatRoom")]
+        public async Task<string> CreateChatRoom(string chatRoomName)
+        {
+            var chatRoomActorName = MakeActorName(chatRoomName);
+            var chatRoomActor = _actorSystem.ActorOf(ChatRoomActor.Props(chatRoomActorName), chatRoomActorName);
+
+            var createChatRoomMessage = new CreateChatRoomMessage(chatRoomName);
+
+            var answer = await chatRoomActor.Ask<ReturnMessage>(createChatRoomMessage);
+            ChatRoomActors.Add(chatRoomActorName, chatRoomActor);
+
+            return answer.Message;
         }
 
 
         [HttpGet("AddMessage")]
-        public async Task<string> AddMessage(string userId, string message)
+        public async Task<string> AddMessage(string userId, string message, string chatRoomName)
         {
-            var addMessage = new AddChatMessage(userId, message);
+            var chatRoomActor = _actorSystem.ActorSelection("/user/" + MakeActorName(chatRoomName));
 
-            var answer = await ChatRoomActor.Ask<ReturnMessage>(addMessage);
+            var addMessage = new AddChatMessage(chatRoomName, userId, message);
+
+            var answer = await chatRoomActor.Ask<ReturnMessage>(addMessage);
             return answer.Message;
 
         }
 
         [HttpGet("GetMessages")]
-        public async Task<IReadOnlyList<ChatMessage>> GetMessages()
+        public async Task<IReadOnlyList<ChatMessage>> GetMessages(string chatRoomName)
         {
-            var answer = await ChatRoomActor.Ask<IReadOnlyList<ChatMessage>>(new GetChatMessage());
+            var chatRoomActor = _actorSystem.ActorSelection("/user/" + MakeActorName(chatRoomName));
+
+            var getChatMessage = new GetChatMessage();
+
+            var answer = await chatRoomActor.Ask<IReadOnlyList<ChatMessage>>(getChatMessage, TimeSpan.FromSeconds(5));
             return answer;
 
+        }
+
+
+
+        private string MakeActorName(string chatRoomName) { 
+            var chatRoomActorName = $"chat-room-actor-{chatRoomName}";
+            return chatRoomActorName;
         }
 
     }
