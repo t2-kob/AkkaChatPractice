@@ -16,6 +16,9 @@ namespace AkkaChat
 {
     public class Startup
     {
+        private const string MyAllowSpecificOrigins = "CORS_yurusima---su";
+
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -23,12 +26,26 @@ namespace AkkaChat
 
         public IConfiguration Configuration { get; }
 
+
+
+
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
 
             services.AddSingleton<ActorSystem>(serviceProvider => ActorSystem.Create("chat-app-actor-system"));
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy(name: MyAllowSpecificOrigins,
+                                  builder =>
+                                  {
+                                      builder.WithOrigins("http://localhost:3000");
+                                  });
+            });
+
 
         }
 
@@ -44,11 +61,14 @@ namespace AkkaChat
 
             app.UseRouting();
 
+            app.UseCors();
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapControllers()
+                         .RequireCors(MyAllowSpecificOrigins);
             });
 
         }
